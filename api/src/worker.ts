@@ -1,5 +1,7 @@
 import { db, redis } from "./db.js";
 
+process.once("SIGTERM", () => process.exit(0));
+
 while (true) {
   const jobId = await redis.brPop("jobs", 0);
   if (!jobId) continue;

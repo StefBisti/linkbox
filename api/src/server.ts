@@ -32,3 +32,11 @@ app.post<{ Body: { url: string } }>(
 );
 
 await app.listen({ host: "0.0.0.0", port: 3000 });
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, async () => {
+    setTimeout(() => process.exit(1), 5000).unref();
+    await app.close();
+    process.exit(0);
+  });
+}
