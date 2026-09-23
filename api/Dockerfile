@@ -5,17 +5,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 FROM base AS build
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
 FROM base AS prod-deps
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 # Auxiliary stage
 FROM base AS dev
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 CMD [ "npx", "tsx", "watch", "src/server.ts" ]
 
