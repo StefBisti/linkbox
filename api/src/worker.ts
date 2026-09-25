@@ -1,4 +1,5 @@
 import { db, redis } from "./db.js";
+import { parseTitle } from "./title.js";
 
 process.once("SIGTERM", () => process.exit(0));
 
@@ -14,7 +15,7 @@ while (true) {
     // !!! fetches any URL. Solve before exposing !!!
     const res = await fetch(row.url, { signal: AbortSignal.timeout(5000) });
     const html = await res.text();
-    const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
+    const title = parseTitle(html);
     await db.query("UPDATE links SET title = $1 WHERE id = $2", [
       title ?? null,
       jobId.element,

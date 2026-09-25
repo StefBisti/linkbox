@@ -21,6 +21,7 @@ CMD [ "npx", "tsx", "watch", "src/server.ts" ]
 
 # Auxiliary stage
 FROM build AS test
+COPY test ./test
 RUN npm test
 
 FROM base AS runtime
