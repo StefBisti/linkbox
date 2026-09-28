@@ -1,17 +1,22 @@
 # syntax=docker/dockerfile:1
 # check=error=true
-FROM node:24-trixie-slim AS base
+
+ARG BASE_IMAGE=node:24-trixie-slim
+
+FROM ${BASE_IMAGE} AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
 
-FROM base AS build
-RUN --mount=type=cache,target=/root/.npm npm ci
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc --mount=type=cache,target=/root/.npm npm ci
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
 FROM base AS prod-deps
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc --mount=type=cache,target=/root/.npm npm ci
 
 # Auxiliary stage
 FROM base AS dev
@@ -23,6 +28,10 @@ CMD [ "npx", "tsx", "watch", "src/server.ts" ]
 FROM build AS test
 COPY test ./test
 RUN npm test
+
+# Auxiliary stage
+FROM scratch AS artifact
+COPY --from=build /app/dist /
 
 FROM base AS runtime
 ENV NODE_ENV=production
