@@ -1,0 +1,145 @@
+x-logging: &logging
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-app: &app
+  <<: *logging
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-api-env: &linkbox-secrets
+  DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/linkbox
+  REDIS_URL: redis://cache:6379
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: linkbox
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "linkbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
+    networks: ["backend"]
+    <<: *logging
+    restart: unless-stopped
+
+  cache:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - cache-data:/data
+    networks: ["backend"]
+    <<: *logging
+    restart: unless-stopped
+
+  migrate:
+    image: linkbox-api:${TAG:?set TAG}
+    environment: *linkbox-secrets
+    command: ["node", "./dist/migrate.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    networks: ["backend"]
+    <<: *app
+    restart: "no"
+
+  worker:
+    image: linkbox-api:${TAG:?set TAG}
+    environment: *linkbox-secrets
+    command: ["node", "./dist/worker.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    init: true
+    healthcheck:
+      disable: true
+    networks: ["edge", "backend"]
+    <<: *app
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
+
+  api:
+    image: linkbox-api:${TAG:?set TAG}
+    environment: *linkbox-secrets
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    init: true
+    networks: ["edge", "backend"]
+    <<: *app
+    stop_grace_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+  
+  web:
+    image: linkbox-web:${TAG:?set TAG}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: ["edge"]
+    <<: *app
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+    volumes:
+      - "./Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "caddy-data:/data"
+      - "caddy-config:/config"
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    networks: ["edge"]
+    <<: *logging
+    restart: unless-stopped
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+volumes:
+  db-data:
+  cache-data:
+  caddy-data:
+  caddy-config:
