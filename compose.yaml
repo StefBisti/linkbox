@@ -1,0 +1,105 @@
+
+x-api-env: &linkbox-secrets
+  DATABASE_URL: postgres://postgres:dev@db:5432/linkbox
+  REDIS_URL: redis://cache:6379
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: linkbox
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "linkbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
+
+  cache:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: ./api
+      target: dev
+    environment: *linkbox-secrets
+    command: ["npx", "tsx", "watch", "src/worker.ts"]
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    init: true
+    develop:
+      watch:
+        - action: sync
+          path: ./api/src
+          target: /app/src
+        - action: rebuild
+          path: ./api/package-lock.json
+
+  api:
+    build:
+      context: ./api
+      target: dev
+    environment: *linkbox-secrets
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    init: true
+    develop:
+      watch:
+        - action: sync
+          path: ./api/src
+          target: /app/src
+        - action: rebuild
+          path: ./api/package-lock.json
+  
+  web:
+    build:
+      context: ./web
+      target: dev
+    ports: 
+      - "127.0.0.1:5173:5173"
+    init: true
+    develop:
+      watch:
+        - action: sync
+          path: ./web/src
+          target: /app/src
+        - action: sync
+          path: ./web/public
+          target: /app/public
+        - action: sync
+          path: ./web/index.html
+          target: /app/index.html
+        - action: rebuild
+          path: ./web/package-lock.json
+        - action: rebuild
+          path: ./web/vite.config.ts
+
+  adminer:
+    image: adminer
+    ports:
+      - "127.0.0.1:8081:8080"
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
