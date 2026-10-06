@@ -5,9 +5,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "tsx watch --env-file=../.env src/server.ts",
-    "dev:worker": "tsx watch --env-file=../.env src/worker.ts",
-    "migrate": "tsx --env-file=../.env src/migrate.ts",
+    "dev": "tsx watch src/server.ts",
+    "dev:worker": "tsx watch src/worker.ts",
+    "migrate": "tsx src/migrate.ts",
     "test": "node --test \"test/**/*.test.js\""
   },
   "author": "Stefan Bisti",
