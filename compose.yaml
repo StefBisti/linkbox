@@ -1,6 +1,6 @@
 
 x-api-env: &linkbox-secrets
-  DATABASE_URL: postgres://postgres:dev@db:5432/linkbox
+  DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/linkbox
   REDIS_URL: redis://cache:6379
 
 services:
@@ -8,7 +8,7 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: linkbox
     volumes:
       - db-data:/var/lib/postgresql/data
