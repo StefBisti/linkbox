@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/home/node/.npm,uid=1000,gid=1000 npm ci
 COPY --chown=1000:1000 . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged AS runtime
+FROM nginxinc/nginx-unprivileged:1.30-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/ /usr/share/nginx/html
 EXPOSE 8080

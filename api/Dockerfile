@@ -2,6 +2,7 @@
 # check=error=true
 
 ARG BASE_IMAGE=node:24-trixie-slim
+ARG RUNTIME_IMAGE=node:24-trixie-slim
 
 FROM ${BASE_IMAGE} AS base
 WORKDIR /app
@@ -16,7 +17,7 @@ COPY src ./src
 RUN npm run build
 
 FROM base AS prod-deps
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 # Auxiliary stage
 FROM base AS dev
@@ -33,8 +34,11 @@ RUN npm test
 FROM scratch AS artifact
 COPY --from=build /app/dist /
 
-FROM base AS runtime
+FROM ${RUNTIME_IMAGE} AS runtime
+WORKDIR /app
 ENV NODE_ENV=production
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+COPY package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 USER 1000:1000
