@@ -20,6 +20,7 @@ while (true) {
       title ?? null,
       jobId.element,
     ]);
+    console.log(`job ${jobId.element} done: ${title}`);
   } catch (err) {
     console.log(`job ${jobId.element} failed:`, err);
   }
