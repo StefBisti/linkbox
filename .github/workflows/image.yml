@@ -13,6 +13,7 @@ env:
 
 jobs:
   image:
+    needs: test
     strategy:
       matrix:
         app: [api, web]
@@ -75,3 +76,25 @@ jobs:
       - name: Sign by digest
         if: github.event_name != 'pull_request'
         run: cosign sign --yes "${{env.IMAGE}}@${{steps.push.outputs.digest}}"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Create .env
+        run: cp .env.example .env
+
+      - name: Docker compose up
+        run: docker compose up -d --build --wait
+
+      - name: Run e2e tests
+        run: cd ./api && npm run test:e2e
+
+      - name: Show logs on error
+        if: failure()
+        run: docker compose logs
+
+      - name: Clean up
+        if: always()
+        run: docker compose down -v
