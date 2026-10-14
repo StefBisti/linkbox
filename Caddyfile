@@ -1,3 +1,7 @@
+{
+	default_sni 192.168.100.50
+}
+
 localhost, 192.168.100.50 {
   handle_path /api/* {
     reverse_proxy api:3000
