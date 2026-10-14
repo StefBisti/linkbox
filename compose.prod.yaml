@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
 
   migrate:
-    image: linkbox-api:${TAG:?set TAG}
+    image: ghcr.io/stefbisti/linkbox-api:${TAG:?set TAG}
     environment: *linkbox-secrets
     command: ["node", "./dist/migrate.js"]
     depends_on:
@@ -65,7 +65,7 @@ services:
     restart: "no"
 
   worker:
-    image: linkbox-api:${TAG:?set TAG}
+    image: ghcr.io/stefbisti/linkbox-api:${TAG:?set TAG}
     environment: *linkbox-secrets
     command: ["node", "./dist/worker.js"]
     depends_on:
@@ -88,7 +88,7 @@ services:
           pids: 256
 
   api:
-    image: linkbox-api:${TAG:?set TAG}
+    image: ghcr.io/stefbisti/linkbox-api:${TAG:?set TAG}
     environment: *linkbox-secrets
     depends_on:
       db:
@@ -109,7 +109,7 @@ services:
           pids: 256
   
   web:
-    image: linkbox-web:${TAG:?set TAG}
+    image: ghcr.io/stefbisti/linkbox-web:${TAG:?set TAG}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/"]
       interval: 5s
