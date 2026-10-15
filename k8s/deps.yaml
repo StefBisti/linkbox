@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: db }
+spec:
+  selector: { matchLabels: { app: db } }
+  template:
+    metadata: { labels: { app: db } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: dev }
+            - { name: POSTGRES_DB, value: linkbox }
+          ports: [{ containerPort: 5432 }]
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres", "-d", "linkbox"] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: db }
+spec:
+  selector: { app: db }
+  ports: [{ port: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: cache }
+spec:
+  selector: { matchLabels: { app: cache } }
+  template:
+    metadata: { labels: { app: cache } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          ports: [{ containerPort: 6379 }]
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: cache }
+spec:
+  selector: { app: cache }
+  ports: [{ port: 6379 }]
