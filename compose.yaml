@@ -93,6 +93,8 @@ services:
     build:
       context: ./web
       target: dev
+    environment:
+      API_URL: http://api:3000 # Vite's dev proxy forwards /api here
     init: true
     develop:
       watch:
